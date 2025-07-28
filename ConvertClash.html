@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تبدیل کانفیگ به YAML برای Clash Verge</title>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --container-bg: #fff;
+            --primary-color: #007bff;
+            --primary-dark: #0056b3;
+            --border-color: #ced4da;
+            --header-border: #e9ecef;
+            --input-bg: #fefefe;
+            --group-border: #cce5ff;
+            --group-bg: #eaf6ff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+            --copy-btn-bg: #28a745;
+            --copy-btn-hover: #218838;
+            --remove-btn-bg: #dc3545;
+            --remove-btn-hover: #c82333;
+            --tooltip-bg: #333;
+            --tooltip-color: #fff;
+        }
+
+        body.dark-mode {
+            --bg-color: #2c2c2c;
+            --text-color: #e0e0e0;
+            --container-bg: #3c3c3c;
+            --primary-color: #4a90e2;
+            --primary-dark: #3a7bd2;
+            --border-color: #555;
+            --header-border: #444;
+            --input-bg: #4c4c4c;
+            --group-border: #4a6c8e;
+            --group-bg: #3a4c60;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+            --copy-btn-bg: #228b22;
+            --copy-btn-hover: #1a711a;
+            --remove-btn-bg: #c0392b;
+            --remove-btn-hover: #a52a22;
+            --tooltip-bg: #eee;
+            --tooltip-color: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: var(--primary-dark);
+            border-bottom: 2px solid var(--header-border);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            min-height: 150px;
+            resize: vertical;
+            box-sizing: border-box;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+            position: relative; /* For tooltip positioning */
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+        input[type="text"], input[type="number"], select {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+        .form-check {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .form-check-input {
+            margin-left: 10px;
+            transform: scale(1.2);
+            accent-color: var(--primary-color); /* Style checkbox itself */
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+            min-width: 150px; /* Ensure buttons don't get too small */
+        }
+        button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #copyConfigBtn {
+            background-color: var(--copy-btn-bg);
+        }
+        #copyConfigBtn:hover {
+            background-color: var(--copy-btn-hover);
+        }
+        #result-container {
+            margin-top: 30px;
+            background-color: var(--header-border);
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+            transition: background-color 0.3s;
+        }
+        #result {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            background-color: var(--container-bg);
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            max-height: 400px;
+            overflow-y: auto;
+            color: var(--text-color);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+        .proxy-group-section {
+            border: 1px solid var(--group-border);
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            background-color: var(--group-bg);
+            position: relative;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .proxy-group-section h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            padding-bottom: 10px;
+            border-bottom: 1px dashed var(--group-border);
+        }
+        .remove-group-btn {
+            background-color: var(--remove-btn-bg);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            position: absolute;
+            top: 20px;
+            left: 20px; /* Adjusted for RTL */
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .remove-group-btn:hover {
+            background-color: var(--remove-btn-hover);
+        }
+        .copy-success-message {
+            color: var(--copy-btn-bg);
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            animation: fadeOut 3s forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Tooltip styles */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            margin-right: 5px; /* Space between label and question mark */
+        }
+        .tooltip-icon {
+            cursor: pointer;
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 1.1em;
+            position: relative; /* For positioning the actual tooltip */
+            top: 2px;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 250px;
+            background-color: var(--tooltip-bg);
+            color: var(--tooltip-color);
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position above the icon */
+            right: 0%; /* Aligned to the right of the icon */
+            margin-right: -125px; /* Center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.9em;
+            text-align: right; /* RTL support */
+        }
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            right: 135px; /* Adjust to align with the center of the icon */
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: var(--tooltip-bg) transparent transparent transparent;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        /* Adjust tooltip for RTL */
+        .tooltip-text {
+            left: auto;
+            right: 0%; /* Aligned to the right of the icon */
+            margin-right: -125px; /* Center the tooltip */
+        }
+        .tooltip-text::after {
+            right: 135px; /* Adjust to align with the center of the icon */
+            left: auto;
+        }
+
+        /* Dark Mode Toggle */
+        #darkModeToggle {
+            background-color: #6c757d;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            flex: none; /* Do not stretch */
+            min-width: unset;
+        }
+        #darkModeToggle:hover {
+            background-color: #5a6268;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr; /* Single column on small screens */
+            }
+            .btn-group button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .remove-group-btn {
+                position: static; /* Stack button on small screens */
+                margin-top: 10px;
+                width: 100%;
+            }
+            .proxy-group-section {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ابزار تبدیل کانفیگ به YAML برای Clash Verge</h1>
+        <button id="darkModeToggle" onclick="toggleDarkMode()">حالت شب</button>
+
+        <h2>ورود کانفیگ‌ها</h2>
+        <div>
+            <div class="form-group">
+                <label for="configs">کانفیگ‌های خود را اینجا وارد کنید (هر کانفیگ در یک خط):
+                    <span class="tooltip-container">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">
+                            اینجا می‌توانید لینک‌های کانفیگ (مانند vmess://, vless://, ss://, trojan://, hysteria://, http(s)://, socks(5)://) را وارد کنید. هر لینک باید در یک خط جداگانه باشد.
+                            <br>مثال:
+                            <br><code>vmess://ey...</code>
+                            <br><code>vless://uuid@domain:port?...</code>
+                        </span>
+                    </span>
+                </label>
+                <textarea id="configs" rows="8" placeholder="vmess://...&#10;vless://...&#10;ss://..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="configUrl">یا کانفیگ را از طریق لینک دریافت کنید:</label>
+                <input type="text" id="configUrl" placeholder="مثال: https://example.com/my-config-link">
+                <button onclick="fetchConfigFromUrl()" style="margin-top: 10px;">دریافت از لینک</button>
+            </div>
+            <div class="form-group">
+                <label for="configFile">یا فایل کانفیگ را آپلود کنید:</label>
+                <input type="file" id="configFile" accept=".txt,.conf,.yaml,.yml">
+                <button onclick="uploadConfigFile()" style="margin-top: 10px;">آپلود فایل</button>
+            </div>
+        </div>
+
+        <h2>تنظیمات عمومی</h2>
+        <div>
+            <div class="grid-container">
+                 <div class="form-group">
+                    <label for="interfaceName">نام اینترفیس (Interface Name):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                نام اینترفیس شبکه که Clash باید از آن استفاده کند. برای برخی تنظیمات پیشرفته شبکه مفید است.
+                                <br>مثال: <code>eth0</code> یا <code>en0</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="interfaceName" placeholder="e.g., eth0">
+                </div>
+                <div class="form-group">
+                    <label for="routingMark">Routing Mark:
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                یک عدد برای علامت‌گذاری بسته‌های شبکه جهت اعمال قوانین روتینگ خاص در سیستم عامل.
+                                <br>مثال: <code>1234</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="number" id="routingMark" placeholder="e.g., 1234">
+                </div>
+                 <div class="form-check">
+                    <input type="checkbox" id="disableUdp" class="form-check-input">
+                    <label for="disableUdp">غیرفعال کردن UDP (Disable UDP)
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                اگر این گزینه فعال باشد، ترافیک UDP از طریق پروکسی‌ها هدایت نخواهد شد.
+                                <br>معمولاً برای اپلیکیشن‌هایی مانند بازی‌های آنلاین یا تماس‌های صوتی که به UDP نیاز دارند، باید غیرفعال باشد.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <h2>تنظیمات گروه‌های پروکسی</h2>
+        <div>
+            <div id="proxyGroupsContainer">
+                </div>
+            <button type="button" onclick="addProxyGroup()">افزودن گروه پروکسی جدید</button>
+        </div>
+
+        <h2>تنظیمات DNS</h2>
+        <div>
+            <div class="grid-container">
+                <div class="form-check">
+                    <input type="checkbox" id="dnsEnable" class="form-check-input" checked>
+                    <label for="dnsEnable">فعال کردن DNS (Enable DNS)
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                DNS داخلی Clash را فعال می‌کند. توصیه می‌شود این گزینه فعال باشد.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="dnsListen">Listen (IP:Port):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                آدرس و پورتی که سرور DNS داخلی Clash روی آن گوش می‌دهد.
+                                <br>مثال: <code>0.0.0.0:53</code> (گوش دادن روی همه اینترفیس‌ها روی پورت 53)
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsListen" value="0.0.0.0:53">
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="dnsIpv6" class="form-check-input" checked>
+                    <label for="dnsIpv6">پشتیبانی IPv6
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                فعال کردن جستجو و پاسخ‌های DNS برای IPv6.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="dnsEnhancedMode">Enhanced Mode:
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                <ul>
+                                    <li><code>fake-ip</code>: برای دامنه هایی که مستقیماً به پروکسی نمی روند، یک IP مجازی اختصاص می دهد.</li>
+                                    <li><code>redir-host</code>: دامنه را مستقیماً به پروکسی هدایت می کند (بدون IP مجازی).</li>
+                                </ul>
+                                <code>fake-ip</code> معمولاً توصیه می شود.
+                            </span>
+                        </span>
+                    </label>
+                    <select id="dnsEnhancedMode">
+                        <option value="fake-ip" selected>Fake-IP</option>
+                        <option value="redir-host">Redir-Host</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dnsFakeIpRange">Fake-IP Range (CIDR):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                محدوده IP هایی که Clash برای Fake-IP استفاده می‌کند. این محدوده نباید با هیچ شبکه واقعی تداخل داشته باشد.
+                                <br>مثال: <code>198.18.0.1/16</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsFakeIpRange" value="198.18.0.1/16">
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="dnsUseSystemHosts" class="form-check-input" checked>
+                    <label for="dnsUseSystemHosts">استفاده از System Hosts
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                Clash از فایل hosts سیستم عامل برای حل نام دامنه استفاده خواهد کرد.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="dnsFakeIpFilter">Fake-IP Filter (Comma-separated domains, e.g., +.ir,+.ru):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                لیست دامنه هایی که نباید Fake-IP برای آنها استفاده شود. با کاما جدا کنید.
+                                <br>مثال: <code>+.ir,+.ru,+.cn</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsFakeIpFilter" value="+.ir,+.ru,+.cn,+.google.com,+.telegram.org">
+                </div>
+                <div class="form-group">
+                    <label for="dnsDefaultNameserver">Default Nameserver (Comma-separated IPs):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                سرورهای DNS پیش فرض برای حل نام دامنه. با کاما جدا کنید.
+                                <br>مثال: <code>178.22.100.100,185.51.200.2</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsDefaultNameserver" value="178.22.100.100,185.51.200.2">
+                </div>
+                <div class="form-group">
+                    <label for="dnsNameserver">Nameserver (Comma-separated IPs for proxies):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                سرورهای DNS مورد استفاده برای درخواست‌هایی که از طریق پروکسی می‌روند. با کاما جدا کنید.
+                                <br>مثال: <code>1.1.1.1,8.8.8.8</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsNameserver" value="1.1.1.1,8.8.8.8">
+                </div>
+                <div class="form-group">
+                    <label for="dnsProxyServerNameserver">Proxy Server Nameserver (Comma-separated IPs):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                سرورهای DNS خاص که برای حل نام میزبان خود پروکسی‌ها استفاده می‌شوند.
+                                <br>مثال: <code>1.1.1.1</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsProxyServerNameserver" placeholder="e.g., 1.1.1.1">
+                </div>
+                <div class="form-group">
+                    <label for="dnsFallback">Fallback Nameserver (Comma-separated IPs):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                سرورهای DNS جایگزین که در صورت عدم پاسخگویی یا خطا از Nameserver اصلی استفاده می‌شوند.
+                                <br>مثال: <code>1.1.1.1,8.8.8.8</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsFallback" value="1.1.1.1,8.8.8.8">
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="dnsFallbackFilterGeoip" class="form-check-input" checked>
+                    <label for="dnsFallbackFilterGeoip">Fallback Filter: GeoIP
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                فیلتر کردن نتایج DNS Fallback بر اساس موقعیت جغرافیایی IP.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="dnsFallbackFilterGeoipCode">Fallback Filter: GeoIP Code (e.g., IR):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                کد کشور برای فیلتر GeoIP.
+                                <br>مثال: <code>IR</code> (برای ایران)
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsFallbackFilterGeoipCode" value="IR">
+                </div>
+                <div class="form-group">
+                    <label for="dnsFallbackFilterIpcidr">Fallback Filter: IP-CIDR (Comma-separated CIDRs):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                فیلتر کردن نتایج DNS Fallback بر اساس محدوده IP (CIDR). با کاما جدا کنید.
+                                <br>مثال: <code>192.168.0.0/16,10.0.0.0/8</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsFallbackFilterIpcidr" placeholder="e.g., 192.168.0.0/16">
+                </div>
+                <div class="form-group">
+                    <label for="dnsFallbackFilterDomain">Fallback Filter: Domain (Comma-separated domains):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                فیلتر کردن نتایج DNS Fallback بر اساس دامنه. با کاما جدا کنید.
+                                <br>مثال: <code>+.google.com,+.telegram.org</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="dnsFallbackFilterDomain" value="+.google.com,+.telegram.org">
+                </div>
+            </div>
+        </div>
+
+        <h2>تنظیمات TUN</h2>
+        <div>
+            <div class="grid-container">
+                <div class="form-check">
+                    <input type="checkbox" id="tunEnable" class="form-check-input" checked>
+                    <label for="tunEnable">فعال کردن TUN (Enable TUN)
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                فعال کردن حالت TUN که به Clash اجازه می‌دهد کل ترافیک سیستم را کنترل کند.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="tunStack">Stack:
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                <ul>
+                                    <li><code>gvisor</code>: یک پیاده‌سازی TCP/IP در فضای کاربر، برای عملکرد بهتر و امنیت بیشتر.</li>
+                                    <li><code>system</code>: استفاده از پشته TCP/IP سیستم عامل.</li>
+                                </ul>
+                                <code>gvisor</code> معمولاً توصیه می شود.
+                            </span>
+                        </span>
+                    </label>
+                    <select id="tunStack">
+                        <option value="gvisor" selected>Gvisor</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tunDnsHijack">DNS Hijack (Comma-separated, e.g., any:53):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                آدرس‌هایی که Clash باید ترافیک DNS آن‌ها را ربوده و به DNS داخلی خود هدایت کند.
+                                <br>مثال: <code>any:53</code> (ربودن همه درخواست‌های DNS روی پورت 53)
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="tunDnsHijack" value="any:53">
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="tunAutoRoute" class="form-check-input" checked>
+                    <label for="tunAutoRoute">Auto Route
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                Clash به طور خودکار روت‌های مورد نیاز را برای هدایت ترافیک به TUN ایجاد می‌کند.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="tunAutoDetectInterface" class="form-check-input" checked>
+                    <label for="tunAutoDetectInterface">Auto Detect Interface
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                Clash به طور خودکار اینترفیس شبکه مناسب را برای TUN شناسایی می‌کند.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="tunStrictRoute" class="form-check-input">
+                    <label for="tunStrictRoute">Strict Route
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                اطمینان از اینکه ترافیک فقط از طریق تونل TUN عبور می‌کند. ممکن است با برخی فایروال‌ها تداخل داشته باشد.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="tunMtu">MTU:
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                حداکثر واحد انتقال (Maximum Transmission Unit) برای اینترفیس TUN. مقدار پیش‌فرض معمولاً 1500 است.
+                            </span>
+                        </span>
+                    </label>
+                    <input type="number" id="tunMtu" value="1500">
+                </div>
+                <div class="form-group">
+                    <label for="tunDevice">Device (Leave empty for auto):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                نام مشخص برای اینترفیس TUN. اگر خالی بگذارید، به طور خودکار انتخاب می‌شود.
+                                <br>مثال: <code>utun0</code> (برای macOS)
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="tunDevice" placeholder="e.g., utun0">
+                </div>
+            </div>
+        </div>
+
+        <h2>تنظیمات Sniffer</h2>
+        <div>
+            <div class="grid-container">
+                <div class="form-check">
+                    <input type="checkbox" id="snifferEnable" class="form-check-input" checked>
+                    <label for="snifferEnable">فعال کردن Sniffer (Enable Sniffer)
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                Sniffer به Clash اجازه می‌دهد تا ترافیک را تحلیل کرده و نوع پروتکل (مانند TLS، HTTP) و نام میزبان را شناسایی کند.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="snifferParsePureIp" class="form-check-input">
+                    <label for="snifferParsePureIp">Parse Pure IP
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                تلاش برای تجزیه و تحلیل ترافیک مستقیم IP برای شناسایی پروتکل‌ها (مانند HTTP) حتی اگر نام دامنه وجود نداشته باشد.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="snifferOverrideDestination" class="form-check-input" checked>
+                    <label for="snifferOverrideDestination">Override Destination
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                اگر Sniffer نام میزبان را از ترافیک شناسایی کند، آدرس مقصد واقعی را با نام میزبان بازنویسی می‌کند.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="snifferTlsPorts">TLS Ports (Comma-separated, e.g., 443,8443):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                پورت‌هایی که Sniffer باید برای ترافیک TLS (HTTPS) بررسی کند. با کاما جدا کنید.
+                                <br>مثال: <code>443,8443</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="snifferTlsPorts" value="443,8443">
+                </div>
+                <div class="form-group">
+                    <label for="snifferQuicPorts">QUIC Ports (Comma-separated, e.g., 443):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                پورت‌هایی که Sniffer باید برای ترافیک QUIC (مانند برخی سرویس‌های گوگل) بررسی کند. با کاما جدا کنید.
+                                <br>مثال: <code>443</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="snifferQuicPorts" value="443">
+                </div>
+                <div class="form-group">
+                    <label for="snifferHttpPorts">HTTP Ports (Comma-separated, e.g., 80,8080):
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                پورت‌هایی که Sniffer باید برای ترافیک HTTP بررسی کند. با کاما جدا کنید.
+                                <br>مثال: <code>80,8080</code>
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" id="snifferHttpPorts" value="80,8080">
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" id="snifferHttpOverrideDestination" class="form-check-input" checked>
+                    <label for="snifferHttpOverrideDestination">HTTP Override Destination
+                        <span class="tooltip-container">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text">
+                                اگر Sniffer نام میزبان را از ترافیک HTTP شناسایی کند، آدرس مقصد واقعی را با نام میزبان بازنویسی می‌کند.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="convertAndGenerate()">تبدیل و ایجاد YAML</button>
+            <button id="copyConfigBtn" style="display:none;" onclick="copyConfig()">کپی کانفیگ</button>
+        </div>
+
+        <div id="result-container" style="display:none;">
+            <h2>خروجی YAML:</h2>
+            <pre id="result"></pre>
+            <div id="copyMessage" class="copy-success-message" style="display:none;">کپی شد!</div>
+        </div>
+    </div>
+
+    <script>
+        function parseVmess(link) {
+            try {
+                const jsonStr = atob(link.substring(8));
+                if (!jsonStr.startsWith('{')) return null;
+                const decoded = JSON.parse(jsonStr);
+                return {
+                    name: decoded.ps || decoded.add || 'vmess_proxy',
+                    type: 'vmess',
+                    server: decoded.add,
+                    port: parseInt(decoded.port, 10),
+                    uuid: decoded.id,
+                    alterId: parseInt(decoded.aid, 10),
+                    cipher: 'auto',
+                    tls: decoded.tls === 'tls',
+                    network: decoded.net,
+                    'ws-opts': decoded.net === 'ws' ? { path: decoded.path || '/', headers: { Host: decoded.host || decoded.add } } : undefined,
+                };
+            } catch (e) {
+                console.error("Error parsing vmess:", link, e);
+                return null;
+            }
+        }
+
+        function parseVless(link) {
+            try {
+                const url = new URL(link);
+                const params = new URLSearchParams(url.search);
+                return {
+                    name: decodeURIComponent(url.hash.substring(1)) || url.hostname,
+                    type: 'vless',
+                    server: url.hostname,
+                    port: parseInt(url.port, 10),
+                    uuid: url.username,
+                    tls: params.get('security') === 'tls',
+                    servername: params.get('sni'),
+                    network: params.get('type'),
+                    'ws-opts': params.get('type') === 'ws' ? { path: params.get('path') || '/', headers: { Host: params.get('host') || url.hostname } } : undefined,
+                    flow: params.get('flow'),
+                };
+            } catch (e) {
+                console.error("Error parsing vless:", link, e);
+                return null;
+            }
+        }
+
+        function parseSS(link) {
+            try {
+                const hashIndex = link.indexOf('#');
+                if (hashIndex === -1) return null;
+
+                const name = decodeURIComponent(link.substring(hashIndex + 1));
+                const uriPart = link.substring(0, hashIndex);
+
+                if (!uriPart.includes('@')) {
+                    const decoded = atob(uriPart.substring(5));
+                    const atIndex = decoded.lastIndexOf('@');
+                    if (atIndex === -1) return null;
+
+                    const credsPart = decoded.substring(0, atIndex);
+                    const serverPart = decoded.substring(atIndex + 1);
+
+                    const passIndex = credsPart.indexOf(':');
+                    if (passIndex === -1) return null;
+
+                    const cipher = credsPart.substring(0, passIndex);
+                    const password = credsPart.substring(passIndex + 1);
+
+                    const portIndex = serverPart.lastIndexOf(':');
+                    if (portIndex === -1) return null;
+
+                    const server = serverPart.substring(0, portIndex);
+                    const port = parseInt(serverPart.substring(portIndex + 1), 10);
+
+                    if (!server || isNaN(port)) return null;
+                    return { name, type: 'ss', server, port, cipher, password };
+                }
+
+                const url = new URL(uriPart);
+                const server = url.hostname;
+                const port = parseInt(url.port, 10);
+
+                if (!server || isNaN(port)) return null;
+
+                let cipher = decodeURIComponent(url.username);
+                let password = decodeURIComponent(url.password);
+
+                try {
+                    const decodedCreds = atob(cipher);
+                    const colonIndex = decodedCreds.indexOf(':');
+                    if (colonIndex > 0 && colonIndex < decodedCreds.length -1) {
+                        cipher = decodedCreds.substring(0, colonIndex);
+                        password = decodedCreds.substring(colonIndex + 1);
+                    }
+                } catch (e) {
+                    // This means the username was not a base64 string,
+                    // so we assume the plain method:pass format was used.
+                }
+
+                return { name, type: 'ss', server, port, cipher, password };
+
+            } catch (e) {
+                console.error("Failed to parse SS link:", link, e);
+                return null;
+            }
+        }
+
+        function parseTrojan(link) {
+             try {
+                const url = new URL(link);
+                const params = new URLSearchParams(url.search);
+                return {
+                    name: decodeURIComponent(url.hash.substring(1)) || url.hostname,
+                    type: 'trojan',
+                    server: url.hostname,
+                    port: parseInt(url.port, 10),
+                    password: decodeURIComponent(url.username),
+                    sni: params.get('sni') || params.get('peer') || url.hostname,
+                    'skip-cert-verify': params.get('allowInsecure') === '1' || params.get('skip-cert-verify') === 'true',
+                };
+            } catch (e) {
+                console.error("Error parsing trojan:", link, e);
+                return null;
+            }
+        }
+
+        function parseHysteria(link) {
+            try {
+                const url = new URL(link);
+                const params = new URLSearchParams(url.search);
+                return {
+                    name: decodeURIComponent(url.hash.substring(1)) || url.hostname,
+                    type: 'hysteria',
+                    server: url.hostname,
+                    port: parseInt(url.port, 10),
+                    auth_str: url.username,
+                    up: params.get('up'),
+                    down: params.get('down'),
+                    'skip-cert-verify': params.get('insecure') === '1',
+                    sni: params.get('sni'),
+                };
+            } catch (e) {
+                 console.error("Error parsing hysteria:", link, e);
+                 return null;
+            }
+        }
+
+        function parseHttp(link) {
+             try {
+                const url = new URL(link);
+                return {
+                    name: decodeURIComponent(url.hash.substring(1)) || url.hostname,
+                    type: 'http',
+                    server: url.hostname,
+                    port: parseInt(url.port, 10),
+                    username: url.username ? decodeURIComponent(url.username) : undefined,
+                    password: url.password ? decodeURIComponent(url.password) : undefined,
+                    tls: url.protocol === 'https:',
+                };
+            } catch (e) {
+                console.error("Error parsing http(s):", link, e);
+                return null;
+            }
+        }
+
+        function parseSocks(link) {
+             try {
+                const url = new URL(link);
+                return {
+                    name: decodeURIComponent(url.hash.substring(1)) || url.hostname,
+                    type: 'socks5',
+                    server: url.hostname,
+                    port: parseInt(url.port, 10),
+                    username: url.username ? decodeURIComponent(url.username) : undefined,
+                    password: url.password ? decodeURIComponent(url.password) : undefined,
+                };
+            } catch (e) {
+                console.error("Error parsing socks:", link, e);
+                return null;
+            }
+        }
+
+        let proxyGroupCounter = 0;
+
+        function addProxyGroup() {
+            proxyGroupCounter++;
+            const container = document.getElementById('proxyGroupsContainer');
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'proxy-group-section';
+            groupDiv.id = `proxyGroup-${proxyGroupCounter}`;
+
+            groupDiv.innerHTML = `
+                <button type="button" class="remove-group-btn" onclick="removeProxyGroup('proxyGroup-${proxyGroupCounter}')">حذف</button>
+                <h3>گروه پروکسی #${proxyGroupCounter}</h3>
+                <div class="grid-container">
+                    <div class="form-group">
+                        <label for="groupName-${proxyGroupCounter}">نام گروه (Group Name):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    نام منحصر به فرد برای این گروه پروکسی.
+                                    <br>مثال: <code>Proxy-Group</code> یا <code>My-Custom-Proxy</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="groupName-${proxyGroupCounter}" value="Proxy-Group">
+                    </div>
+                    <div class="form-group">
+                        <label for="groupType-${proxyGroupCounter}">نوع گروه (Group Type):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    <ul>
+                                        <li><code>select</code>: به کاربر اجازه می‌دهد پروکسی مورد نظر را انتخاب کند.</li>
+                                        <li><code>url-test</code>: به طور خودکار سریعترین پروکسی را انتخاب می‌کند.</li>
+                                        <li><code>fallback</code>: از پروکسی اول استفاده می‌کند و در صورت عدم کارکرد، به بعدی می‌رود.</li>
+                                        <li><code>load-balance</code>: ترافیک را بین پروکسی‌ها تقسیم می‌کند.</li>
+                                    </ul>
+                                </span>
+                            </span>
+                        </label>
+                        <select id="groupType-${proxyGroupCounter}">
+                            <option value="select">Select</option>
+                            <option value="url-test">URL-Test</option>
+                            <option value="fallback">Fallback</option>
+                            <option value="load-balance">Load-Balance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="groupIcon-${proxyGroupCounter}">آیکون گروه (Proxy Group Icon):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    لینک یک آیکون برای نمایش در کنار نام گروه در رابط کاربری Clash Verge.
+                                    <br>مثال: <code>https://example.com/icon.png</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="groupIcon-${proxyGroupCounter}" placeholder="لینک آیکون">
+                    </div>
+                    <div class="form-group">
+                        <label for="healthCheckUrl-${proxyGroupCounter}">آدرس بررسی سلامت (Health Check URL):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    آدرسی که برای بررسی وضعیت سلامت پروکسی‌ها استفاده می‌شود (فقط برای URL-Test و Fallback).
+                                    <br>مثال: <code>http://www.gstatic.com/generate_204</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="healthCheckUrl-${proxyGroupCounter}" value="http://www.gstatic.com/generate_204">
+                    </div>
+                    <div class="form-group">
+                        <label for="expectedStatus-${proxyGroupCounter}">وضعیت مورد انتظار (Expected Status):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    کد وضعیت HTTP مورد انتظار از Health Check URL (فقط برای URL-Test و Fallback).
+                                    <br>مثال: <code>204</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="number" id="expectedStatus-${proxyGroupCounter}" value="204" min="100" max="599">
+                    </div>
+                    <div class="form-group">
+                        <label for="healthCheckInterval-${proxyGroupCounter}">فاصله زمانی بررسی (Interval - ثانیه):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    فاصله زمانی بین بررسی‌های سلامت پروکسی‌ها به ثانیه (فقط برای URL-Test و Fallback).
+                                    <br>مثال: <code>300</code> (هر 5 دقیقه)
+                                </span>
+                            </span>
+                        </label>
+                        <input type="number" id="healthCheckInterval-${proxyGroupCounter}" value="300">
+                    </div>
+                     <div class="form-group">
+                        <label for="healthCheckTimeout-${proxyGroupCounter}">تایم‌اوت (Timeout - میلی‌ثانیه):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    حداکثر زمان انتظار برای پاسخ از Health Check URL به میلی‌ثانیه (فقط برای URL-Test و Fallback).
+                                    <br>مثال: <code>3000</code> (3 ثانیه)
+                                </span>
+                            </span>
+                        </label>
+                        <input type="number" id="healthCheckTimeout-${proxyGroupCounter}" value="3000">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxFailedTimes-${proxyGroupCounter}">حداکثر دفعات شکست (Max Failed Times):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    تعداد دفعات متوالی شکست در بررسی سلامت قبل از اینکه پروکسی غیرفعال شود (فقط برای URL-Test و Fallback).
+                                    <br>مثال: <code>3</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="number" id="maxFailedTimes-${proxyGroupCounter}" value="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="includedProxies-${proxyGroupCounter}">پروکسی‌های شامل (Comma-separated, leave empty for all):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    لیستی از نام پروکسی‌های مشخص که باید در این گروه گنجانده شوند. با کاما جدا کنید.
+                                    <br>اگر "شامل همه پروکسی‌ها" یا "شامل همه Providerها" فعال باشد، این گزینه نادیده گرفته می‌شود.
+                                    <br>مثال: <code>MyProxy1, MyProxy2</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="includedProxies-${proxyGroupCounter}" placeholder="proxy1, proxy2">
+                    </div>
+                    <div class="form-group">
+                        <label for="useProviders-${proxyGroupCounter}">استفاده از Provider (Comma-separated names):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    لیستی از نام‌های Provider‌های پروکسی که باید پروکسی‌های آنها در این گروه گنجانده شوند.
+                                    <br>مثال: <code>MyProvider1, MyProvider2</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="useProviders-${proxyGroupCounter}" placeholder="provider1, provider2">
+                    </div>
+                    <div class="form-group">
+                        <label for="filter-${proxyGroupCounter}">فیلتر (Regex, for proxy names):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    یک عبارت با قاعده (Regex) برای فیلتر کردن نام پروکسی‌ها. فقط پروکسی‌هایی که با این فیلتر مطابقت دارند، شامل می‌شوند.
+                                    <br>مثال: <code>^(?!.*Direct).*$</code> (همه پروکسی‌ها بجز آنهایی که شامل "Direct" هستند)
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="filter-${proxyGroupCounter}" placeholder="e.g., ^(?!.*Direct).*$">
+                    </div>
+                    <div class="form-group">
+                        <label for="excludeFilter-${proxyGroupCounter}">فیلتر حذفی (Regex, for proxy names):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    یک عبارت با قاعده (Regex) برای حذف پروکسی‌ها. پروکسی‌هایی که با این فیلتر مطابقت دارند، حذف می‌شوند.
+                                    <br>مثال: <code>.*test.*</code> (حذف هر پروکسی که شامل "test" باشد)
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="excludeFilter-${proxyGroupCounter}" placeholder="e.g., .*test.*">
+                    </div>
+                    <div class="form-group">
+                        <label for="excludeType-${proxyGroupCounter}">نوع حذفی (Comma-separated types, e.g., ss,trojan):
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    لیستی از انواع پروکسی که باید از این گروه حذف شوند. با کاما جدا کنید.
+                                    <br>مثال: <code>ss, trojan</code>
+                                </span>
+                            </span>
+                        </label>
+                        <input type="text" id="excludeType-${proxyGroupCounter}" placeholder="e.g., ss, trojan">
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="includeAllProxies-${proxyGroupCounter}" class="form-check-input" checked>
+                        <label for="includeAllProxies-${proxyGroupCounter}">شامل همه پروکسی‌ها
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    اگر فعال باشد، تمام پروکسی‌های تعریف شده در بخش "کانفیگ‌ها" به این گروه اضافه می‌شوند.
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="includeAllProviders-${proxyGroupCounter}" class="form-check-input">
+                        <label for="includeAllProviders-${proxyGroupCounter}">شامل همه Providerها
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    اگر فعال باشد، تمام پروکسی‌هایی که از طریق Providerها اضافه شده‌اند (در یک فایل کانفیگ خارجی دیگر) به این گروه اضافه می‌شوند.
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                     <div class="form-check">
+                        <input type="checkbox" id="lazy-${proxyGroupCounter}" class="form-check-input">
+                        <label for="lazy-${proxyGroupCounter}">Lazy (برای URL-Test/Fallback)
+                            <span class="tooltip-container">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text">
+                                    فقط پروکسی‌هایی که در حال حاضر استفاده می‌شوند، بررسی سلامت می‌شوند (کاهش بار روی سرورها).
+                                    <br>فقط برای گروه‌های <code>url-test</code> و <code>fallback</code> قابل اعمال است.
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            `;
+            container.appendChild(groupDiv);
+            // Hide health check options initially if type is select
+            const groupTypeSelect = document.getElementById(`groupType-${proxyGroupCounter}`);
+            toggleHealthCheckVisibility(groupTypeSelect);
+            groupTypeSelect.onchange = () => toggleHealthCheckVisibility(groupTypeSelect);
+        }
+
+        function toggleHealthCheckVisibility(selectElement) {
+            const groupDiv = selectElement.closest('.proxy-group-section');
+            const healthCheckFields = [
+                `healthCheckUrl-${selectElement.id.split('-')[1]}`,
+                `expectedStatus-${selectElement.id.split('-')[1]}`,
+                `healthCheckInterval-${selectElement.id.split('-')[1]}`,
+                `healthCheckTimeout-${selectElement.id.split('-')[1]}`,
+                `maxFailedTimes-${selectElement.id.split('-')[1]}`,
+                `lazy-${selectElement.id.split('-')[1]}`
+            ];
+            const display = (selectElement.value === 'url-test' || selectElement.value === 'fallback') ? 'flex' : 'none';
+
+            healthCheckFields.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const parentFormGroup = element.closest('.form-group') || element.closest('.form-check');
+                    if (parentFormGroup) {
+                        parentFormGroup.style.display = display;
+                    }
+                }
+            });
+        }
+
+
+        function removeProxyGroup(id) {
+            document.getElementById(id).remove();
+        }
+
+        // Add the default proxy group on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            addProxyGroup();
+            // Set initial dark mode state
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkModeToggle').textContent = 'حالت روشن';
+            } else {
+                document.getElementById('darkModeToggle').textContent = 'حالت شب';
+            }
+        });
+
+        function parseCommaSeparatedList(input) {
+            if (!input) return [];
+            return input.split(',').map(item => item.trim()).filter(item => item !== '');
+        }
+
+        function parseCommaSeparatedNumbers(input) {
+            if (!input) return [];
+            return input.split(',').map(item => parseInt(item.trim(), 10)).filter(item => !isNaN(item));
+        }
+
+        async function fetchConfigFromUrl() {
+            const url = document.getElementById('configUrl').value.trim();
+            if (!url) {
+                alert('لطفا یک URL وارد کنید.');
+                return;
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+                // If it's a base64 encoded string of configs, decode it first
+                try {
+                    const decodedText = atob(text);
+                    document.getElementById('configs').value = decodedText;
+                } catch (e) {
+                    // Not base64, assume raw text
+                    document.getElementById('configs').value = text;
+                }
+                alert('کانفیگ با موفقیت از URL دریافت شد.');
+            } catch (error) {
+                console.error('Error fetching config:', error);
+                alert('خطا در دریافت کانفیگ از URL: ' + error.message);
+            }
+        }
+
+        function uploadConfigFile() {
+            const fileInput = document.getElementById('configFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('لطفا یک فایل را انتخاب کنید.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                // If it's a base64 encoded string of configs, decode it first
+                try {
+                    const decodedContent = atob(content);
+                    document.getElementById('configs').value = decodedContent;
+                } catch (e) {
+                    // Not base64, assume raw text
+                    document.getElementById('configs').value = content;
+                }
+                alert('فایل کانفیگ با موفقیت آپلود شد.');
+            };
+            reader.onerror = (e) => {
+                console.error('Error reading file:', e);
+                alert('خطا در خواندن فایل.');
+            };
+            reader.readAsText(file);
+        }
+
+
+        function convertAndGenerate() {
+            const configs = document.getElementById('configs').value.split('\n');
+            const proxies = [];
+            let proxyIndexCounter = 1;
+
+            for (const config of configs) {
+                const trimmedConfig = config.trim();
+                if (trimmedConfig === '') continue;
+
+                let proxy = null;
+
+                if (trimmedConfig.startsWith('vmess://')) {
+                    proxy = parseVmess(trimmedConfig);
+                } else if (trimmedConfig.startsWith('vless://')) {
+                    proxy = parseVless(trimmedConfig);
+                } else if (trimmedConfig.startsWith('ss://')) {
+                    proxy = parseSS(trimmedConfig);
+                } else if (trimmedConfig.startsWith('trojan://')) {
+                    proxy = parseTrojan(trimmedConfig);
+                } else if (trimmedConfig.startsWith('hysteria://')) {
+                    proxy = parseHysteria(trimmedConfig);
+                } else if (trimmedConfig.startsWith('http://') || trimmedConfig.startsWith('https://')) {
+                    proxy = parseHttp(trimmedConfig);
+                } else if (trimmedConfig.startsWith('socks5://') || trimmedConfig.startsWith('socks://')) {
+                    proxy = parseSocks(trimmedConfig);
+                }
+
+                if (proxy && proxy.port && Number.isInteger(proxy.port)) {
+                    let baseName = proxy.name;
+                    // Remove existing index suffix if any
+                    const match = baseName.match(/ - \d+$/);
+                    if (match) {
+                        baseName = baseName.substring(0, match.index);
+                    }
+                    proxy.name = `${baseName} - ${proxyIndexCounter++}`;
+
+                    const disableUdp = document.getElementById('disableUdp').checked;
+                    if (!disableUdp) {
+                        proxy.udp = true;
+                    } else {
+                        proxy.udp = false;
+                    }
+
+                    const interfaceName = document.getElementById('interfaceName').value.trim();
+                    if (interfaceName) proxy['interface-name'] = interfaceName;
+
+                    const routingMark = document.getElementById('routingMark').value.trim();
+                    if (routingMark) proxy['routing-mark'] = parseInt(routingMark);
+
+                    proxies.push(proxy);
+                } else {
+                    console.warn(`Skipping invalid or unparsable proxy: ${trimmedConfig}`);
+                }
+            }
+
+            const proxyNames = proxies.map(p => p.name);
+            const proxyGroups = [];
+
+            document.querySelectorAll('.proxy-group-section').forEach((groupDiv) => {
+                const idSuffix = groupDiv.id.split('-')[1];
+                const groupName = document.getElementById(`groupName-${idSuffix}`).value.trim();
+                const groupType = document.getElementById(`groupType-${idSuffix}`).value;
+                const groupIcon = document.getElementById(`groupIcon-${idSuffix}`).value.trim();
+                
+                const includeAllProxies = document.getElementById(`includeAllProxies-${idSuffix}`).checked;
+                const includeAllProviders = document.getElementById(`includeAllProviders-${idSuffix}`).checked;
+
+                let includedProxies = [];
+                // Only populate includedProxies if 'include all' flags are NOT checked
+                if (!includeAllProxies && !includeAllProviders) {
+                    const includedProxiesInput = document.getElementById(`includedProxies-${idSuffix}`).value.trim();
+                    if (includedProxiesInput) {
+                        includedProxies = parseCommaSeparatedList(includedProxiesInput);
+                        // Filter to ensure only proxies actually parsed are included
+                        includedProxies = includedProxies.filter(name => proxyNames.includes(name));
+                    }
+                }
+
+                let useProviders = [];
+                if (!includeAllProviders) {
+                    const useProvidersInput = document.getElementById(`useProviders-${idSuffix}`).value.trim();
+                    if (useProvidersInput) {
+                        useProviders = parseCommaSeparatedList(useProvidersInput);
+                    }
+                }
+
+                if (groupName) {
+                    const currentGroup = {
+                        name: groupName,
+                        type: groupType,
+                    };
+
+                    // Add 'proxies' key if there are explicit proxies or if includeAllProxies is true
+                    if (includedProxies.length > 0) {
+                        currentGroup.proxies = includedProxies;
+                    } else if (includeAllProxies) { // If user explicitly selected includeAllProxies, add the flag
+                        currentGroup['include-all-proxies'] = true;
+                    }
+
+                    // Add 'use-providers' key if there are explicit providers or if includeAllProviders is true
+                    if (useProviders.length > 0) {
+                        currentGroup['use-providers'] = useProviders;
+                    } else if (includeAllProviders) { // If user explicitly selected includeAllProviders, add the flag
+                        currentGroup['include-all-providers'] = true;
+                    }
+                    // Crucial addition: If no specific proxies or providers are added, and neither "include all" checkbox
+                    // is ticked, default to including all proxies to prevent the "missing `use` or `proxies`" error.
+                    // This covers cases where the group might otherwise be empty of members.
+                    if (!currentGroup.proxies && !currentGroup['include-all-proxies'] &&
+                        !currentGroup['use-providers'] && !currentGroup['include-all-providers']) {
+                        currentGroup['include-all-proxies'] = true;
+                    }
+
+
+                    if (groupType === 'url-test' || groupType === 'fallback') {
+                        currentGroup.url = document.getElementById(`healthCheckUrl-${idSuffix}`).value;
+                        currentGroup.interval = parseInt(document.getElementById(`healthCheckInterval-${idSuffix}`).value, 10);
+                        currentGroup.timeout = parseInt(document.getElementById(`healthCheckTimeout-${idSuffix}`).value, 10);
+                        currentGroup['expected-status'] = parseInt(document.getElementById(`expectedStatus-${idSuffix}`).value, 10);
+                        currentGroup['max-failed-times'] = parseInt(document.getElementById(`maxFailedTimes-${idSuffix}`).value, 10);
+                        currentGroup.lazy = document.getElementById(`lazy-${idSuffix}`).checked;
+                    }
+
+                    if (groupIcon) {
+                        currentGroup.icon = groupIcon;
+                    }
+
+                    const filter = document.getElementById(`filter-${idSuffix}`).value.trim();
+                    if (filter) {
+                        currentGroup.filter = filter;
+                    }
+                    const excludeFilter = document.getElementById(`excludeFilter-${idSuffix}`).value.trim();
+                    if (excludeFilter) {
+                        currentGroup['exclude-filter'] = excludeFilter;
+                    }
+                    const excludeType = parseCommaSeparatedList(document.getElementById(`excludeType-${idSuffix}`).value);
+                    if (excludeType.length > 0) {
+                        currentGroup['exclude-type'] = excludeType;
+                    }
+
+                    proxyGroups.push(currentGroup);
+                }
+            });
+
+            // Ensure 'DIRECT' and 'REJECT' are available in the Rules group
+            const allGroupNames = proxyGroups.map(g => g.name).filter(Boolean);
+            const rulesProxies = [].concat(allGroupNames);
+            if (!rulesProxies.includes('DIRECT')) rulesProxies.push('DIRECT');
+            if (!rulesProxies.includes('REJECT')) rulesProxies.push('REJECT');
+
+            const rulesGroup = {
+                'name': 'Rules',
+                'type': 'select',
+                'proxies': rulesProxies
+            };
+            proxyGroups.push(rulesGroup);
+
+            // DNS Configuration
+            const dnsConfig = {};
+            if (document.getElementById('dnsEnable').checked) {
+                dnsConfig.enable = true;
+                dnsConfig.listen = document.getElementById('dnsListen').value;
+                dnsConfig.ipv6 = document.getElementById('dnsIpv6').checked;
+                dnsConfig['enhanced-mode'] = document.getElementById('dnsEnhancedMode').value;
+                dnsConfig['fake-ip-range'] = document.getElementById('dnsFakeIpRange').value;
+                dnsConfig['use-system-hosts'] = document.getElementById('dnsUseSystemHosts').checked;
+                dnsConfig['fake-ip-filter'] = parseCommaSeparatedList(document.getElementById('dnsFakeIpFilter').value);
+                dnsConfig['default-nameserver'] = parseCommaSeparatedList(document.getElementById('dnsDefaultNameserver').value);
+                dnsConfig.nameserver = parseCommaSeparatedList(document.getElementById('dnsNameserver').value);
+
+                const proxyServerNameserver = parseCommaSeparatedList(document.getElementById('dnsProxyServerNameserver').value);
+                if (proxyServerNameserver.length > 0) {
+                    dnsConfig['proxy-server-nameserver'] = proxyServerNameserver;
+                }
+
+                dnsConfig.fallback = parseCommaSeparatedList(document.getElementById('dnsFallback').value);
+
+                const fallbackFilter = {};
+                if (document.getElementById('dnsFallbackFilterGeoip').checked) {
+                    fallbackFilter.geoip = true;
+                    fallbackFilter['geoip-code'] = document.getElementById('dnsFallbackFilterGeoipCode').value;
+                }
+                const ipcidrFilter = parseCommaSeparatedList(document.getElementById('dnsFallbackFilterIpcidr').value);
+                if (ipcidrFilter.length > 0) {
+                    fallbackFilter.ipcidr = ipcidrFilter;
+                }
+                const domainFilter = parseCommaSeparatedList(document.getElementById('dnsFallbackFilterDomain').value);
+                if (domainFilter.length > 0) {
+                    fallbackFilter.domain = domainFilter;
+                }
+                if (Object.keys(fallbackFilter).length > 0) {
+                    dnsConfig['fallback-filter'] = fallbackFilter;
+                }
+            }
+
+
+            // TUN Configuration
+            const tunConfig = {};
+            if (document.getElementById('tunEnable').checked) {
+                tunConfig.enable = true;
+                tunConfig.stack = document.getElementById('tunStack').value;
+                tunConfig['dns-hijack'] = parseCommaSeparatedList(document.getElementById('tunDnsHijack').value);
+                tunConfig['auto-route'] = document.getElementById('tunAutoRoute').checked;
+                tunConfig['auto-detect-interface'] = document.getElementById('tunAutoDetectInterface').checked;
+                tunConfig['strict-route'] = document.getElementById('tunStrictRoute').checked;
+                tunConfig.mtu = parseInt(document.getElementById('tunMtu').value, 10);
+                const tunDevice = document.getElementById('tunDevice').value.trim();
+                if (tunDevice) {
+                    tunConfig.device = tunDevice;
+                }
+            }
+
+            // Sniffer Configuration
+            const snifferConfig = {};
+            if (document.getElementById('snifferEnable').checked) {
+                snifferConfig.enable = true;
+                snifferConfig['parse-pure-ip'] = document.getElementById('snifferParsePureIp').checked;
+                snifferConfig['override-destination'] = document.getElementById('snifferOverrideDestination').checked;
+
+                const sniffRules = {};
+                const tlsPorts = parseCommaSeparatedNumbers(document.getElementById('snifferTlsPorts').value);
+                if (tlsPorts.length > 0) sniffRules.TLS = { ports: tlsPorts };
+                const quicPorts = parseCommaSeparatedNumbers(document.getElementById('snifferQuicPorts').value);
+                if (quicPorts.length > 0) sniffRules.QUIC = { ports: quicPorts };
+                
+                const httpPorts = parseCommaSeparatedNumbers(document.getElementById('snifferHttpPorts').value);
+                if (httpPorts.length > 0) {
+                    sniffRules.HTTP = {
+                        ports: httpPorts,
+                        'override-destination': document.getElementById('snifferHttpOverrideDestination').checked
+                    };
+                }
+                
+                if (Object.keys(sniffRules).length > 0) {
+                    snifferConfig.sniff = sniffRules;
+                }
+            }
+
+
+            const yamlObject = {
+                'mixed-port': 7890,
+                'allow-lan': false,
+                'mode': 'rule',
+                'log-level': 'info',
+                'external-controller': '127.0.0.1:9090',
+                'proxies': proxies,
+                'proxy-groups': proxyGroups,
+                'rules': [
+                    'DOMAIN-SUFFIX,ir,DIRECT',
+                    'DOMAIN-KEYWORD,iran,DIRECT',
+                    'DOMAIN-SUFFIX,cn,DIRECT',
+                    'IP-CIDR,192.168.0.0/16,DIRECT',
+                    'DOMAIN-KEYWORD,google,Rules',
+                    'DOMAIN-KEYWORD,telegram,Rules',
+                    'MATCH,Rules'
+                ],
+            };
+
+            // Add DNS, TUN, Sniffer configs only if enabled and have content
+            if (Object.keys(dnsConfig).length > 0 && dnsConfig.enable) yamlObject.dns = dnsConfig;
+            if (Object.keys(tunConfig).length > 0 && tunConfig.enable) yamlObject.tun = tunConfig;
+            if (Object.keys(snifferConfig).length > 0 && snifferConfig.enable) yamlObject.sniffer = snifferConfig;
+
+            const yamlString = jsyaml.dump(yamlObject, { indent: 2, lineWidth: -1, skipInvalid: true });
+            document.getElementById('result').textContent = yamlString;
+            document.getElementById('result-container').style.display = 'block';
+            document.getElementById('copyConfigBtn').style.display = 'block'; // Show copy button
+        }
+
+        function copyConfig() {
+            const resultText = document.getElementById('result').textContent;
+            navigator.clipboard.writeText(resultText).then(() => {
+                const copyMessage = document.getElementById('copyMessage');
+                copyMessage.style.display = 'block';
+                setTimeout(() => {
+                    copyMessage.style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('خطا در کپی کردن متن. لطفا به صورت دستی کپی کنید.');
+            });
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('darkMode', 'enabled');
+                document.getElementById('darkModeToggle').textContent = 'حالت روشن';
+            } else {
+                localStorage.setItem('darkMode', 'disabled');
+                document.getElementById('darkModeToggle').textContent = 'حالت شب';
+            }
+        }
+    </script>
+</body>
+</html>
